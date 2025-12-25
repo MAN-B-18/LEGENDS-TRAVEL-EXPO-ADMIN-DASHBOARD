@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upcoming Tours | Travel Expo Admin</title>
+   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="ic_launcher-playstore.png" />
+
+  <!-- ✅ Firebase SDKs -->
+  <script type="module">
+    import { 
+      initializeApp 
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { 
+      getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, 
+      query, orderBy, serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ✅ Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyA-5ydCuWuH0nHyRv2yklDqxAa0MnO1-Fo",
+      authDomain: "legends-travel-expo-cbba5.firebaseapp.com",
+      databaseURL: "https://legends-travel-expo-cbba5-default-rtdb.firebaseio.com",
+      projectId: "legends-travel-expo-cbba5",
+      storageBucket: "legends-travel-expo-cbba5.firebasestorage.app",
+      messagingSenderId: "195511468939",
+      appId: "1:195511468939:web:724e78094424d5e23a258e",
+      measurementId: "G-W3NPJC3REY"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const toursRef = collection(db, "tours");
+
+    // ✅ Real-time listener for tours
+    const q = query(toursRef, orderBy("date", "asc"));
+    const toursTable = document.addEventListener("DOMContentLoaded", () => {
+      const tableBody = document.getElementById("toursTable");
+
+      onSnapshot(q, (snapshot) => {
+        tableBody.innerHTML = "";
+        if (snapshot.empty) {
+          tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No upcoming tours yet.</td></tr>`;
+          return;
+        }
+
+        snapshot.forEach((docSnap) => {
+          const tour = docSnap.data();
+          const id = docSnap.id;
+          const formattedDate = new Date(tour.date).toLocaleDateString();
+
+          const row = `
+            <tr>
+              <td>${tour.name || "N/A"}</td>
+              <td>${formattedDate}</td>
+              <td>${tour.location || "N/A"}</td>
+              <td>R${tour.price || "0"}</td>
+              <td>${tour.paymentType || "N/A"}</td>
+              <td><span class="status upcoming">Upcoming</span></td>
+              <td>
+                <button class="btn-edit" data-id="${id}">✏️</button>
+                <button class="btn-delete" data-id="${id}">🗑️</button>
+              </td>
+            </tr>
+          `;
+          tableBody.insertAdjacentHTML("beforeend", row);
+        });
+
+        // ✅ Edit & Delete handlers
+        document.querySelectorAll(".btn-delete").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            const id = e.target.dataset.id;
+            if (confirm("Are you sure you want to delete this tour?")) {
+              await deleteDoc(doc(db, "tours", id));
+              alert("🗑️ Tour deleted.");
+            }
+          });
+        });
+
+        document.querySelectorAll(".btn-edit").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            const id = e.target.dataset.id;
+            const name = prompt("Enter new tour name:");
+            const location = prompt("Enter new location:");
+            const price = prompt("Enter new price (R):");
+            if (!name || !location || !price) return alert("❌ All fields required.");
+            await updateDoc(doc(db, "tours", id), {
+              name, location, price: parseFloat(price)
+            });
+            alert("✅ Tour updated!");
+          });
+        });
+      });
+
+      // ✅ Add new tour
+      const addTourForm = document.getElementById("addTourForm");
+      addTourForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("tourName").value.trim();
+        const date = document.getElementById("tourDate").value;
+        const location = document.getElementById("tourLocation").value.trim();
+        const price = parseFloat(document.getElementById("tourPrice").value);
+        const paymentType = document.getElementById("tourPayment").value;
+
+        if (!name || !date || !location || isNaN(price)) {
+          alert("⚠️ Please fill in all fields correctly.");
+          return;
+        }
+
+        const today = new Date();
+        const selectedDate = new Date(date);
+        if (selectedDate < today.setHours(0,0,0,0)) {
+          alert("⚠️ Tour date must be today or in the future.");
+          return;
+        }
+
+        try {
+          await addDoc(toursRef, {
+            name,
+            date: new Date(date).toISOString(),
+            location,
+            price,
+            paymentType,
+            createdAt: serverTimestamp(),
+          });
+          alert("✅ Tour added successfully!");
+          addTourForm.reset();
+        } catch (error) {
+          console.error("Error adding tour: ", error);
+          alert("❌ Failed to add tour. Check console for details.");
+        }
+      });
+    });
+  </script>
+
+  <style>
+    :root {
+      --sidebar-bg: #0d253f;
+      --accent-color: #007bff;
+    }
+
+    body {
+      display: flex;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8f9fb;
+     
+    }
+
+
+    /* Main */
+    .main {
+      margin-left: 250px;
+      flex: 1;
+      padding: 30px;
+    }
+
+    .header {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      text-size-adjust: 16px;
+    }
+
+    .breadcrumbs {
+      color: #333;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .widget {
+      background: #fff;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-top: 30px;
+    }
+
+    .widget h2 {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    /* Form */
+    .add-tour-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .add-tour-form input,
+    .add-tour-form select {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+/* Style for the Upcoming Tours heading */
+.upcoming-tours-heading {
+  font-size: 2rem;        /* increase size (try 2.5rem for even bigger) */
+  font-weight: 700;       /* bold for emphasis */
+  color: #0b3954;         /* dark blue shade – looks professional */
+  display: flex;
+  align-items: center;
+  gap: 10px;              /* space between icon and text */
+  margin-bottom: 1.2rem;
+}
+
+/* Optional: if you have an icon next to it */
+.upcoming-tours-heading i,
+.upcoming-tours-heading img {
+  width: 28px;
+  height: 28px;
+}
+
+    .btn-primary {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+
+    /* Table */
+    .styled-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+      text-align: left;
+    }
+
+    .styled-table th, .styled-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .styled-table th {
+      background-color: #f2f2f2;
+    }
+
+    .status.upcoming {
+      color: green;
+      font-weight: bold;
+    }
+
+    .btn-edit, .btn-delete {
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .btn-delete:hover {
+      color: red;
+    }
+
+    .btn-edit:hover {
+      color: #007bff;
+    }
+  </style>
+</head>
+
+<body>
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="Images/ic_launcher-playstore.png" alt="logo" width="180" />
+  </div>
+
+  <a href="index.html">🏠 Dashboard</a>
+    <a href="analytics.html">📊 Analytics</a>
+    <a href="customers.html">👥 Customers</a>
+    <a href="bookings.html">📅 Bookings</a>
+    <a href="tours.html">🗺️ Upcoming Tours</a>
+    <a href="notifications.html" class="active">🔔 Notifications</a>
+   <a href="add_tours.html">➕ Add Tours</a> <!-- ✅ New Sidebar Link -->
+
+</div>
+
+  <!-- Main Content -->
+  <div class="main fade-in">
+    <div class="header">
+      <div class="breadcrumbs">🗺️ Upcoming Tours</div>
+    </div>
+
+    <!-- Add Tour Form -->
+    <div class="widget">
+      <h2>➕ Add New Tour</h2>
+      <form id="addTourForm" class="add-tour-form">
+        <div class="form-row">
+          <input type="text" id="tourName" placeholder="Tour Name" required />
+          <input type="date" id="tourDate" required />
+        </div>
+        <div class="form-row">
+          <input type="text" id="tourLocation" placeholder="Location" required />
+          <input type="number" id="tourPrice" placeholder="Price (R)" required />
+        </div>
+        <div class="form-row">
+          <select id="tourPayment" required>
+            <option value="" disabled selected>Select Payment Type</option>
+            <option value="Full Payment">Full Payment</option>
+            <option value="Deposit">Deposit</option>
+            <option value="Installments">Installments</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary">Add Tour</button>
+      </form>
+    </div>
+
+    <!-- Upcoming Tours Table -->
+    <div class="widget">
+      <h2>🗓️ Scheduled Upcoming Tours</h2>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>Tour Name</th>
+            <th>Date</th>
+            <th>Location</th>
+            <th>Price</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="toursTable">
+          <tr><td colspan="7" style="text-align:center;">Loading tours...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

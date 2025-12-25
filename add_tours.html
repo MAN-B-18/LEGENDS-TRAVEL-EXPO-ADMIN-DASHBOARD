@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Add Tours | Legends Travel Expo</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      display: flex;
+      background-color: #f5f6fc;
+      margin: 0;
+    }
+
+    .sidebar {
+      width: 250px;
+      background-color: #1b237e;
+      color: white;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 25px;
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+
+    .sidebar-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .sidebar-header img {
+      width: 180px;
+      height: auto;
+      border-radius: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px 18px;
+      border-radius: 8px;
+      transition: background 0.3s;
+      width: 80%;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #2532a8;
+    }
+
+    .main {
+      margin-left: 260px;
+      padding: 30px;
+      flex: 1;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      max-width: 900px;
+      margin: 0 auto 25px;
+    }
+
+    label { font-weight: 600; display: block; margin-top: 12px; }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      margin-top: 15px;
+      width: 100%;
+      background: #1b237e;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .message { text-align: center; margin-top: 12px; font-weight: 700; }
+
+    /* Table styling */
+    .tours-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .tours-table th, .tours-table td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .tours-table th {
+      background-color: #1b237e;
+      color: white;
+      text-align: center;
+    }
+
+    .tours-table td img {
+      width: 120px;
+      border-radius: 8px;
+    }
+
+    .delete-btn {
+      background-color: crimson;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      background-color: darkred;
+    }
+
+    h1, h2 {
+      color: #1b237e;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="Images/ic_launcher-playstore.png" alt="logo" width="180" />
+  </div>
+
+   <a href="index.html">🏠 Dashboard</a>
+    <a href="analytics.html">📊 Analytics</a>
+    <a href="customers.html">👥 Customers</a>
+    <a href="bookings.html">📅 Bookings</a>
+    <a href="tours.html">🗺️ Upcoming Tours</a>
+    <a href="notifications.html" class="active">🔔 Notifications</a>
+   <a href="add_tours.html">➕ Add Tours</a> <!-- ✅ New Sidebar Link -->
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="card">
+    <h1>➕ Add New Tour</h1>
+    <label>Destination</label>
+    <input id="destination" type="text" placeholder="e.g. Cape Town Adventure" />
+    <label>Description</label>
+    <textarea id="description" placeholder="Enter tour details..."></textarea>
+    <label>Image</label>
+    <input id="image" type="file" accept="image/*" />
+    <button id="addTourBtn">Add Tour</button>
+    <p id="message" class="message"></p>
+  </div>
+
+  <div class="card">
+    <h2>📋 Available Tours</h2>
+    <div id="tourList"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+  const SUPABASE_URL = "https://trpxhgmqirxzxldmicmy.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRycHhoZ21xaXJ4enhsZG1pY215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1MDk4NTcsImV4cCI6MjA3NjA4NTg1N30.1c4t_YMgU7pvTFcQw4EyFkf0KBeEeDs-K6LTtgGFouc";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const BUCKET = "tours";
+
+  const destEl = document.getElementById("destination");
+  const descEl = document.getElementById("description");
+  const imgEl = document.getElementById("image");
+  const addBtn = document.getElementById("addTourBtn");
+  const msgEl = document.getElementById("message");
+  const tourList = document.getElementById("tourList");
+
+  function showMsg(text, color="black") {
+    msgEl.textContent = text;
+    msgEl.style.color = color;
+  }
+
+  async function loadTours() {
+    try {
+      const { data, error } = await supabase.from("tours").select("*").order("inserted_at", { ascending: false });
+      if (error) {
+        console.error("Load error:", error);
+        showMsg("Error loading tours.", "red");
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        tourList.innerHTML = "<p style='text-align:center'>No tours available yet.</p>";
+        return;
+      }
+
+      let tableHTML = `
+        <table class="tours-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Destination</th>
+              <th>Description</th>
+              <th>Image</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(t => {
+        tableHTML += `
+          <tr>
+            <td>${t.id}</td>
+            <td>${escapeHtml(t.destination || '')}</td>
+            <td>${escapeHtml(t.description || '')}</td>
+            <td>${t.image_url ? `<img src="${t.image_url}" alt="Tour Image">` : "No Image"}</td>
+            <td><button class="delete-btn" onclick="deleteTour(${t.id})">Delete</button></td>
+          </tr>
+        `;
+      });
+
+      tableHTML += "</tbody></table>";
+      tourList.innerHTML = tableHTML;
+    } catch (err) {
+      console.error(err);
+      showMsg("Unexpected error loading tours.", "red");
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  addBtn.addEventListener("click", async () => {
+    const destination = destEl.value.trim();
+    const description = descEl.value.trim();
+    const file = imgEl.files[0];
+
+    if (!destination || !description || !file) {
+      showMsg("⚠️ Please fill all fields and select an image.", "red");
+      return;
+    }
+
+    showMsg("⏳ Uploading image...", "orange");
+
+    try {
+      const filename = `${Date.now()}_${file.name.replace(/\s+/g,"_")}`;
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(filename, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+      const imageUrl = publicData?.publicUrl ?? null;
+
+      showMsg("⏳ Saving tour details...", "orange");
+      const { error: insertError } = await supabase.from("tours").insert([{ destination, description, image_url: imageUrl }]);
+      if (insertError) throw insertError;
+
+      showMsg("✅ Tour added successfully!", "green");
+      destEl.value = "";
+      descEl.value = "";
+      imgEl.value = "";
+      await loadTours();
+      setTimeout(()=> showMsg("", "black"), 1500);
+    } catch (err) {
+      console.error(err);
+      showMsg("❌ Error adding tour.", "red");
+    }
+  });
+
+  window.deleteTour = async function(id){
+    if (!confirm("Delete this tour?")) return;
+    const { error } = await supabase.from("tours").delete().eq("id", id);
+    if (error) {
+      alert("Delete failed (see console)");
+      console.error(error);
+    } else {
+      await loadTours();
+    }
+  };
+
+  try {
+    supabase.channel("tours-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tours" }, () => loadTours())
+      .subscribe();
+  } catch(e){ console.warn("Realtime subscribe failed:", e); }
+
+  loadTours();
+</script>
+</body>
+</html>

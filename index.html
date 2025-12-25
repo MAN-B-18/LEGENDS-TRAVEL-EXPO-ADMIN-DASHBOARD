@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Expo Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="ic_launcher-playstore.png" />
+</head>
+<body>
+  
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="Images/ic_launcher-playstore.png" alt="logo" width="180" />
+  </div>
+
+  <a href="index.html">🏠 Dashboard</a>
+    <a href="analytics.html">📊 Analytics</a>
+    <a href="customers.html">👥 Customers</a>
+    <a href="bookings.html">📅 Bookings</a>
+    <a href="tours.html">🗺️ Upcoming Tours</a>
+    <a href="notifications.html" class="active">🔔 Notifications</a>
+   <a href="add_tours.html">➕ Add Tours</a> <!-- ✅ New Sidebar Link -->
+
+</div>
+
+  <!-- Main Content -->
+  <div class="main fade-in">
+    <div class="header">
+      <div class="breadcrumbs">Dashboard / Home</div>
+      <div class="profile-dropdown">
+        <button class="profile-btn">Welcome, Admin ⬇️</button>
+        <div class="dropdown-content">
+          <a href="login.html">Logout</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards">
+      <div class="card counter" id="visitorsCard">
+        <h3>Total Users</h3>
+        <p>0</p>
+      </div>
+      <div class="card counter" id="bookingsCard">
+        <h3>Total Bookings</h3>
+        <p>0</p>
+      </div>
+      <div class="card counter" id="revenueCard">
+        <h3>Revenue</h3>
+        <p>R0</p>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <h2>📊 Live Bookings Overview</h2>
+      <canvas id="bookingsChart"></canvas>
+    </div>
+
+  <!-- 🌟 Latest Registered Users Section -->
+<div class="widget customers-widget">
+  <h2>👥 Latest Registered Users</h2>
+  <div id="userList" class="user-cards">Loading users...</div>
+</div>
+
+<!-- 🪟 User Details Modal -->
+<div id="userModal" class="user-modal">
+  <div class="user-modal-content">
+    <span class="close-modal">&times;</span>
+    <h2 id="modalName">User Name</h2>
+    <p><strong>Email:</strong> <span id="modalEmail"></span></p>
+    <p><strong>Phone:</strong> <span id="modalPhone"></span></p>
+    <p><strong>Registered On:</strong> <span id="modalDate"></span></p>
+    <p><strong>User ID:</strong> <span id="modalId"></span></p>
+  </div>
+</div>
+
+<style>
+  /* 🌟 Latest Users Section */
+  .customers-widget {
+    background: #fff;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-top: 30px;
+  }
+
+  .customers-widget h2 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    color: #222;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .user-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+  }
+
+  .user-card {
+    background: #f9fbff;
+    border-radius: 12px;
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+    transition: 0.25s ease;
+  }
+
+  .user-card:hover {
+    transform: translateY(-4px);
+    background: #eef5ff;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+  }
+
+  .user-card strong {
+    color: #007bff;
+  }
+
+  /* 🪟 Modal Styling */
+  .user-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .user-modal-content {
+    background: white;
+    border-radius: 15px;
+    padding: 25px 30px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .close-modal {
+    position: absolute;
+    top: 10px; right: 15px;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* 🌙 Dark Mode */
+  body.dark-mode .customers-widget {
+    background: #1e1f24;
+    color: #f5f5f5;
+  }
+  body.dark-mode .user-card {
+    background: #2c2d33;
+  }
+  body.dark-mode .user-modal-content {
+    background: #2c2d33;
+    color: #fff;
+  }
+</style>
+
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-5ydCuWuH0nHyRv2yklDqxAa0MnO1-Fo",
+    authDomain: "legends-travel-expo-cbba5.firebaseapp.com",
+    projectId: "legends-travel-expo-cbba5",
+    storageBucket: "legends-travel-expo-cbba5.firebasestorage.app",
+    messagingSenderId: "195511468939",
+    appId: "1:195511468939:web:724e78094424d5e23a258e",
+    measurementId: "G-W3NPJC3REY"
+  };
+
+  // Initialize
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // DOM elements
+  const visitorsCard = document.querySelector("#visitorsCard p");
+  const bookingsCard = document.querySelector("#bookingsCard p");
+  const revenueCard = document.querySelector("#revenueCard p");
+  const userList = document.getElementById("userList");
+
+  // Chart setup (bookings per month)
+  const ctx = document.getElementById("bookingsChart").getContext("2d");
+  const chartLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const chartData = new Array(12).fill(0);
+
+  const bookingsChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        label: "Bookings per Month",
+        data: chartData,
+        backgroundColor: "rgba(46, 134, 222, 0.7)",
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 700 },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  // Helper: parse many timestamp formats (Firestore Timestamp, number(ms), ISO string)
+  function parseTimestamp(ts) {
+    if (!ts) return null;
+    // Firestore Timestamp object (has seconds)
+    if (typeof ts === "object" && ts.seconds !== undefined) {
+      return new Date(ts.seconds * 1000);
+    }
+    // numeric (milliseconds or seconds)
+    if (typeof ts === "number") {
+      // assume milliseconds if > 1e12, otherwise seconds
+      if (ts > 1e12) return new Date(ts);
+      return new Date(ts * 1000);
+    }
+    // string
+    if (typeof ts === "string") {
+      // try ISO
+      const d = new Date(ts);
+      if (!isNaN(d.getTime())) return d;
+      // try parsing as integer string (ms)
+      const n = parseInt(ts, 10);
+      if (!isNaN(n)) {
+        if (n > 1e12) return new Date(n);
+        return new Date(n * 1000);
+      }
+    }
+    return null;
+  }
+
+  // Animated counter: prefix optional (e.g., "R")
+  function animateCounter(el, toNumber, prefix = "", duration = 900) {
+    if (!el) return;
+    const start = parseInt((el.textContent || "").replace(/[^\d]/g, "")) || 0;
+    const end = Math.max(0, Math.floor(toNumber));
+    const startTime = performance.now();
+
+    function frame(now) {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      const val = Math.floor(start + (end - start) * t);
+      el.textContent = prefix + (prefix ? val.toLocaleString() : val.toLocaleString());
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Update bookings chart with monthlyCounts (array of 12 numbers)
+  function updateBookingsChart(monthlyCounts) {
+    bookingsChart.data.datasets[0].data = monthlyCounts;
+    bookingsChart.update();
+  }
+
+  // Live listener for bookings collection
+  onSnapshot(collection(db, "bookings"), (snapshot) => {
+    // compute monthly counts & sum revenue
+    const monthlyCounts = new Array(12).fill(0);
+    let totalRevenue = 0;
+    let docCount = snapshot.size;
+
+    snapshot.docs.forEach(d => {
+      const data = d.data();
+
+      // parse timestamp from multiple possible fields
+      // - prefer createdAt, then timestamp, then date
+      const tsCandidate = data.createdAt ?? data.timestamp ?? data.date ?? data.time ?? data.bookedAt;
+      const parsed = parseTimestamp(tsCandidate);
+
+      if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+        monthlyCounts[parsed.getMonth()]++;
+      } else {
+        // fallback: if there's a 'date' string like "11 Oct 2025"
+        if (typeof data.date === "string") {
+          const parsed2 = new Date(data.date);
+          if (!isNaN(parsed2.getTime())) monthlyCounts[parsed2.getMonth()]++;
+        }
+      }
+
+      // amount may be stored as string or number, sometimes 'amount' or 'price'
+      const amount = (data.amount !== undefined) ? data.amount : (data.price !== undefined ? data.price : 0);
+      const amtNumber = parseFloat(amount) || 0;
+      totalRevenue += amtNumber;
+    });
+
+    // animate counters
+    animateCounter(bookingsCard, docCount);
+    // Show revenue with currency prefix (R)
+    animateCounter(revenueCard, totalRevenue, "R");
+
+    // update chart
+    updateBookingsChart(monthlyCounts);
+  });
+
+  // Live listener for users collection
+  onSnapshot(collection(db, "users"), (snapshot) => {
+    const users = snapshot.docs.map(doc => doc.data());
+    const totalUsers = users.length;
+    animateCounter(visitorsCard, totalUsers);
+
+    // show latest 5 users (use createdAt or timestamp if present for ordering client-side)
+    // We'll present last 5 doc entries from the snapshot order (Firestore default)
+    const latest = snapshot.docs.slice("").reverse().map(s => s.data());
+    userList.innerHTML = latest.map(u => `
+      <div class="user-card">
+        <strong>${u.name || u.fullName || "Unknown"}</strong>
+        <span>${u.email || "No email"}</span>
+      </div>
+    `).join("");
+  });
+</script>
+
+</body>
+</html>
